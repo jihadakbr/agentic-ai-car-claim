@@ -1,0 +1,247 @@
+{
+  "uji_cepat": false,
+  "part": {
+    "kelas": [
+      "Windshield",
+      "Back-windshield",
+      "Front-window",
+      "Back-window",
+      "Front-door",
+      "Back-door",
+      "Front-wheel",
+      "Back-wheel",
+      "Front-bumper",
+      "Back-bumper",
+      "Headlight",
+      "Tail-light",
+      "Hood",
+      "Trunk",
+      "License-plate",
+      "Mirror",
+      "Roof",
+      "Grille",
+      "Rocker-panel",
+      "Quarter-panel",
+      "Fender"
+    ],
+    "metrik": [
+      {
+        "kelas": "License-plate",
+        "contoh_val": 78,
+        "mask_mAP50": 0.724,
+        "mask_mAP50_95": 0.474,
+        "box_mAP50": 0.712
+      },
+      {
+        "kelas": "Tail-light",
+        "contoh_val": 143,
+        "mask_mAP50": 0.734,
+        "mask_mAP50_95": 0.492,
+        "box_mAP50": 0.759
+      },
+      {
+        "kelas": "Trunk",
+        "contoh_val": 80,
+        "mask_mAP50": 0.763,
+        "mask_mAP50_95": 0.539,
+        "box_mAP50": 0.723
+      },
+      {
+        "kelas": "Rocker-panel",
+        "contoh_val": 165,
+        "mask_mAP50": 0.834,
+        "mask_mAP50_95": 0.424,
+        "box_mAP50": 0.916
+      },
+      {
+        "kelas": "Quarter-panel",
+        "contoh_val": 170,
+        "mask_mAP50": 0.842,
+        "mask_mAP50_95": 0.505,
+        "box_mAP50": 0.813
+      },
+      {
+        "kelas": "Roof",
+        "contoh_val": 158,
+        "mask_mAP50": 0.852,
+        "mask_mAP50_95": 0.379,
+        "box_mAP50": 0.876
+      },
+      {
+        "kelas": "Grille",
+        "contoh_val": 111,
+        "mask_mAP50": 0.874,
+        "mask_mAP50_95": 0.575,
+        "box_mAP50": 0.863
+      },
+      {
+        "kelas": "Front-window",
+        "contoh_val": 193,
+        "mask_mAP50": 0.877,
+        "mask_mAP50_95": 0.631,
+        "box_mAP50": 0.884
+      },
+      {
+        "kelas": "Mirror",
+        "contoh_val": 210,
+        "mask_mAP50": 0.888,
+        "mask_mAP50_95": 0.495,
+        "box_mAP50": 0.889
+      },
+      {
+        "kelas": "Back-window",
+        "contoh_val": 258,
+        "mask_mAP50": 0.889,
+        "mask_mAP50_95": 0.572,
+        "box_mAP50": 0.9
+      },
+      {
+        "kelas": "Back-bumper",
+        "contoh_val": 89,
+        "mask_mAP50": 0.891,
+        "mask_mAP50_95": 0.71,
+        "box_mAP50": 0.899
+      },
+      {
+        "kelas": "Headlight",
+        "contoh_val": 198,
+        "mask_mAP50": 0.893,
+        "mask_mAP50_95": 0.652,
+        "box_mAP50": 0.898
+      },
+      {
+        "kelas": "Back-windshield",
+        "contoh_val": 55,
+        "mask_mAP50": 0.902,
+        "mask_mAP50_95": 0.728,
+        "box_mAP50": 0.901
+      },
+      {
+        "kelas": "Fender",
+        "contoh_val": 194,
+        "mask_mAP50": 0.909,
+        "mask_mAP50_95": 0.641,
+        "box_mAP50": 0.917
+      },
+      {
+        "kelas": "Hood",
+        "contoh_val": 144,
+        "mask_mAP50": 0.949,
+        "mask_mAP50_95": 0.805,
+        "box_mAP50": 0.97
+      },
+      {
+        "kelas": "Windshield",
+        "contoh_val": 132,
+        "mask_mAP50": 0.957,
+        "mask_mAP50_95": 0.834,
+        "box_mAP50": 0.973
+      },
+      {
+        "kelas": "Front-door",
+        "contoh_val": 185,
+        "mask_mAP50": 0.969,
+        "mask_mAP50_95": 0.704,
+        "box_mAP50": 0.974
+      },
+      {
+        "kelas": "Back-door",
+        "contoh_val": 148,
+        "mask_mAP50": 0.973,
+        "mask_mAP50_95": 0.684,
+        "box_mAP50": 0.973
+      },
+      {
+        "kelas": "Back-wheel",
+        "contoh_val": 173,
+        "mask_mAP50": 0.977,
+        "mask_mAP50_95": 0.795,
+        "box_mAP50": 0.967
+      },
+      {
+        "kelas": "Front-wheel",
+        "contoh_val": 181,
+        "mask_mAP50": 0.98,
+        "mask_mAP50_95": 0.842,
+        "box_mAP50": 0.98
+      },
+      {
+        "kelas": "Front-bumper",
+        "contoh_val": 139,
+        "mask_mAP50": 0.981,
+        "mask_mAP50_95": 0.732,
+        "box_mAP50": 0.981
+      }
+    ]
+  },
+  "damage": {
+    "kelas": [
+      "Dent",
+      "Cracked",
+      "Scratch",
+      "Flaking",
+      "Broken part",
+      "Paint chip",
+      "Missing part",
+      "Corrosion"
+    ],
+    "metrik": [
+      {
+        "kelas": "Flaking",
+        "contoh_val": 49,
+        "mask_mAP50": 0.0,
+        "mask_mAP50_95": 0.0,
+        "box_mAP50": 0.001
+      },
+      {
+        "kelas": "Corrosion",
+        "contoh_val": 58,
+        "mask_mAP50": 0.011,
+        "mask_mAP50_95": 0.003,
+        "box_mAP50": 0.014
+      },
+      {
+        "kelas": "Paint chip",
+        "contoh_val": 130,
+        "mask_mAP50": 0.018,
+        "mask_mAP50_95": 0.006,
+        "box_mAP50": 0.017
+      },
+      {
+        "kelas": "Scratch",
+        "contoh_val": 583,
+        "mask_mAP50": 0.043,
+        "mask_mAP50_95": 0.01,
+        "box_mAP50": 0.057
+      },
+      {
+        "kelas": "Dent",
+        "contoh_val": 330,
+        "mask_mAP50": 0.073,
+        "mask_mAP50_95": 0.024,
+        "box_mAP50": 0.122
+      },
+      {
+        "kelas": "Broken part",
+        "contoh_val": 287,
+        "mask_mAP50": 0.195,
+        "mask_mAP50_95": 0.079,
+        "box_mAP50": 0.266
+      },
+      {
+        "kelas": "Cracked",
+        "contoh_val": 19,
+        "mask_mAP50": 0.279,
+        "mask_mAP50_95": 0.215,
+        "box_mAP50": 0.275
+      },
+      {
+        "kelas": "Missing part",
+        "contoh_val": 116,
+        "mask_mAP50": 0.487,
+        "mask_mAP50_95": 0.275,
+        "box_mAP50": 0.502
+      }
+    ]
+  }
+}

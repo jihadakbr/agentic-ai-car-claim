@@ -1,0 +1,72 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend untuk Agentic AI Car Claim, penilaian klaim asuransi mobil dari foto"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "faker>=28.0",
+    "pillow>=10.4",
+    "imagehash>=4.3",
+    "numpy>=1.26",
+    # Penyusun PDF estimasi. Dipilih karena cukup dipasang lewat pip, sedangkan alternatif
+    # berbasis HTML butuh pustaka sistem GTK yang menyusahkan di Windows maupun di Space.
+    "reportlab>=4.2",
+]
+
+# Dependensi model dan LLM dipisah supaya lapisan fondasi (skema database, generator
+# data, cost engine) bisa dipasang dan diuji tanpa mengunduh torch yang besar.
+[project.optional-dependencies]
+ml = [
+    "ultralytics>=8.3",
+    "onnxruntime>=1.19",
+    "rapidocr>=3.0",
+    "opencv-python-headless>=4.10",
+]
+serve = [
+    # Pencari harga mobil bekas saat kendaraannya tidak ada di katalog. Tanpa kunci API,
+    # jadi tetap nol biaya. Masuk di sini, bukan dependensi utama, karena kemampuan mencari
+    # cuma berarti saat sistem melayani permintaan.
+    "ddgs>=9.0",
+    "gradio>=5.0",
+    "fastapi>=0.115",
+    "python-multipart>=0.0.32",
+    "httpx>=0.27",
+    "openai>=1.50",
+]
+
+[dependency-groups]
+dev = [
+    "nbformat>=5.11.0",
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Tanpa mode importlib, pytest menaruh folder backend di awal jalur pencarian modul, dan
+# `app.py` untuk Hugging Face Space menutupi paket `app` sehingga semua uji gagal dimuat.
+addopts = "--import-mode=importlib"
+# Uji bertanda lambat memuat model sungguhan. Lewati saat bekerja cepat: -m "not lambat"
+markers = ["lambat: memuat model sungguhan, butuh dependensi opsional ml"]
+
+[tool.ruff]
+line-length = 100
+
+# `Depends(...)` di nilai bawaan argumen adalah cara baku FastAPI menyatakan dependency,
+# bukan kelalaian yang mau ditangkap aturan B008.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]

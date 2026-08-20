@@ -1,0 +1,36 @@
+name: Jaga Supabase tetap bangun
+
+# Project Supabase paket gratis dijeda otomatis setelah satu minggu tanpa aktivitas (query di database)
+
+on:
+  schedule:
+    # Hit Tiap Senin pagi UTC
+    - cron: "0 2 * * 1"
+  # Supaya bisa dijalankan manual dari tab Actions
+  workflow_dispatch:
+
+jobs:
+  panggil:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Panggil alamat kesehatan
+        env:
+          ALAMAT_SPACE: ${{ secrets.ALAMAT_SPACE }}
+        run: |
+          if [ -z "$ALAMAT_SPACE" ]; then
+            echo "Secret ALAMAT_SPACE belum diisi di Settings repo." >&2
+            exit 1
+          fi
+          # Space yang baru bangun butuh puluhan detik menyalakan container dan memuat
+          # model, jadi percobaan pertama wajar gagal. Dicoba beberapa kali dengan jeda.
+          for percobaan in 1 2 3 4 5; do
+            if curl -fsS --max-time 120 "${ALAMAT_SPACE%/}/api/kesehatan"; then
+              echo ""
+              echo "Berhasil pada percobaan ke-$percobaan."
+              exit 0
+            fi
+            echo "Percobaan ke-$percobaan gagal, menunggu 60 detik."
+            sleep 60
+          done
+          echo "Lima percobaan gagal. Periksa status Space dan Supabase." >&2
+          exit 1

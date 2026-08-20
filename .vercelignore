@@ -1,0 +1,7 @@
+# Vercel cuma membangun frontend. Folder backend disembunyikan darinya, karena kalau
+# terlihat, Vercel mendeteksinya sebagai service FastAPI kedua lalu mencoba memasang torch
+# dan ultralytics sebagai serverless function, yang tidak mungkin muat.
+#
+# Backend yang sungguhan jalan di Hugging Face Space, dari repo terpisah. Berkas ini tidak
+# menyentuh git sama sekali, jadi isi backend tetap ikut ke GitHub seperti biasa.
+backend/

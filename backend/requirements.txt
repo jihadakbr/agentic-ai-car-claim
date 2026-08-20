@@ -1,0 +1,36 @@
+# Dependensi untuk Hugging Face Space. Versi dikunci supaya Space yang dibangun ulang
+# menjelang presentasi tidak tiba-tiba memakai pustaka versi baru yang berbeda perilakunya.
+#
+# Torch tidak ditulis di sini. Space ZeroGPU sudah menyediakannya, dan menuliskannya lagi
+# berisiko menarik versi yang tidak cocok dengan runtime-nya.
+
+sqlalchemy==2.0.52
+psycopg[binary]==3.3.4
+# Batas atasnya ditentukan gradio[mcp], yang dipasang sendiri oleh Space di luar berkas
+# ini dan menuntut pydantic <= 2.12.5. Menaikkannya membuat build Space gagal menyelesaikan
+# dependensi, dan galatnya muncul saat build, bukan saat dijalankan.
+pydantic==2.12.5
+pillow==12.3.0
+ImageHash==4.3.2
+numpy==2.5.2
+faker==40.36.0
+# Penyusun PDF estimasi, SPK, dan penawaran beli. Tanpa ini ketiga alamat PDF balas 500.
+reportlab==5.0.0
+
+ultralytics==8.4.120
+onnxruntime==1.28.0
+rapidocr==3.9.2
+opencv-python-headless==5.0.0.93
+
+gradio==6.24.0
+fastapi==0.141.1
+python-multipart==0.0.32
+openai==3.1.0
+# Pencari harga mobil bekas saat kendaraannya tidak ada di katalog.
+ddgs==9.15.0
+# Dipakai penyimpan foto ke Supabase Storage. Ditulis sendiri, tidak diandalkan ikut
+# terbawa gradio, supaya versinya tidak berubah diam-diam saat gradio dinaikkan.
+httpx==0.28.1
+# Cuma dipakai menandai satu fungsi sebagai fungsi ber-GPU, syarat wajib hardware ZeroGPU.
+# Inferensinya sendiri berjalan di prosesor.
+spaces

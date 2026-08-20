@@ -1,0 +1,44 @@
+# Kunci API. Repo ini publik karena lisensi AGPL Ultralytics, jadi baris ini yang menahan
+# kunci supaya tidak ikut terbit.
+.env
+.env.local
+*.key
+
+# Lingkungan Python dan hasil kompilasi
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Database dan berkas hasil jalan, dibuat ulang lewat scripts/isi_data_awal.py
+*.db
+# Seluruh isinya bahan lokal, termasuk folder demo siap unggah. Yang membacanya kotak pilih
+# berkas di komputer yang dipakai presentasi, bukan Vercel maupun Space, jadi tidak ada
+# gunanya ikut terbit. Salin manual ke laptop presentasi, atau susun ulang lewat
+# scripts/susun_demo_unggah.py yang membaca dataset Kaggle 6 GB di data/kaggle.
+backend/data/
+
+# Bobot model, ukurannya ratusan megabita dan diunduh dari hasil training. Bentuk
+# terkompresinya ikut dikunci: isinya berkas yang sama, dan ukurannya melewati batas keras
+# 100 MB per berkas di GitHub sehingga push ditolak di tengah jalan.
+*.pt
+*.onnx
+backend/models/**/bobot-deteksi.zip
+
+# Data galeri halaman Demo, dibangkitkan lewat scripts/siapkan_galeri_demo.py. Sengaja ikut
+# masuk repo, karena Vercel membangun frontend dari isi repo dan halaman Demo membaca
+# berkas ini saat dijalankan. Bangkitkan ulang lalu commit kalau foto demonya berubah.
+
+# Frontend
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Ignore
+docs
+backend/notebooks
+diagram
+sync-space.ps1
