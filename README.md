@@ -31,7 +31,7 @@ A claim moves through the system like this. The surveyor submits damage photos, 
 
 ## Architecture
 
-![Architecture diagram](img/Car%20Claim%20Workflow.png)
+![Architecture diagram workflow](img/Car%20Claim%20Workflow.png)
 
 ## Models
 
