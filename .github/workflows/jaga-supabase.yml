@@ -34,3 +34,4 @@ jobs:
           done
           echo "Lima percobaan gagal. Periksa status Space dan Supabase." >&2
           exit 1
+
