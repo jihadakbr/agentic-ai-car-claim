@@ -1,0 +1,39 @@
+name: Jaga Space tetap bangun
+
+# Space ZeroGPU tidur setelah 48 jam menganggur, dan waktu tidurnya tidak bisa diubah.
+# Dipisah dari jaga-supabase.yml karena umur batasnya beda jauh: Supabase seminggu, Space
+# dua hari, jadi jadwalnya tidak boleh saling mengikat.
+
+on:
+  schedule:
+    # Tiap 6 jam. Jadwal GitHub bisa telat saat antrean padat, jadi jaraknya sengaja jauh
+    # di bawah batas tidur supaya telat beberapa jam pun masih aman.
+    - cron: "0 */6 * * *"
+  # Supaya bisa dijalankan manual dari tab Actions
+  workflow_dispatch:
+
+jobs:
+  panggil:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Panggil alamat kesehatan
+        env:
+          ALAMAT_SPACE: ${{ secrets.ALAMAT_SPACE }}
+        run: |
+          if [ -z "$ALAMAT_SPACE" ]; then
+            echo "Secret ALAMAT_SPACE belum diisi di Settings repo." >&2
+            exit 1
+          fi
+          # Space yang sudah telanjur tidur butuh puluhan detik menyalakan container dan
+          # memuat model, jadi percobaan pertama wajar gagal.
+          for percobaan in 1 2 3; do
+            if curl -fsS --max-time 120 "${ALAMAT_SPACE%/}/api/kesehatan"; then
+              echo ""
+              echo "Berhasil pada percobaan ke-$percobaan."
+              exit 0
+            fi
+            echo "Percobaan ke-$percobaan gagal, menunggu 60 detik."
+            sleep 60
+          done
+          echo "Tiga percobaan gagal. Periksa status Space di Hugging Face." >&2
+          exit 1
