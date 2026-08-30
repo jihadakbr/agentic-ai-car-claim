@@ -16,11 +16,34 @@ Ada dua pembagian berbeda di sini dan keduanya diperlukan:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
 from app.pipeline.cost_engine import Temuan
+
+# Bagian yang menandai ujung depan dan ujung belakang mobil. Dipakai menyimpulkan mobilnya
+# menghadap ke mana di sebuah foto, karena datasetnya tidak punya kelas kiri dan kanan.
+PENANDA_DEPAN = frozenset({
+    "Windshield", "Hood", "Grille", "Headlight", "Front-bumper",
+    "Front-window", "Front-door", "Front-wheel",
+})
+PENANDA_BELAKANG = frozenset({
+    "Back-windshield", "Trunk", "Tail-light", "Back-bumper",
+    "Back-window", "Back-door", "Back-wheel",
+})
+
+# Bagian yang memang ada sepasang di mobil. Di luar daftar ini sisi selalu kosong, karena
+# kap mesin, atap, dan bumper cuma ada satu sehingga label kiri atau kanan pasti salah.
+BAGIAN_BERSISI = frozenset({
+    "Headlight", "Tail-light", "Mirror", "Fender", "Quarter-panel",
+    "Front-door", "Back-door", "Front-window", "Back-window",
+    "Front-wheel", "Back-wheel", "Rocker-panel",
+})
+
+# Jarak mendatar antara ujung depan dan ujung belakang, sebagai bagian dari lebar mobil di
+# foto, sebelum fotonya dianggap serong. Di bawah ini mobil dianggap dilihat tegak lurus.
+AMBANG_SERONG = 0.15
 
 
 @dataclass(frozen=True)
@@ -105,28 +128,99 @@ def pusat_kendaraan(part: list[MaskDeteksi]) -> float | None:
     return pusat_x(np.logical_or.reduce(ada))
 
 
-def tentukan_sisi(mask: np.ndarray, pusat: float | None) -> str | None:
-    """Tentukan sisi kiri atau kanan dari posisi mask terhadap titik tengah mobil.
+@dataclass(frozen=True)
+class ArahHadap:
+    """Kesimpulan mobil menghadap ke mana di satu foto."""
+
+    # "depan", "belakang", atau "serong".
+    tampak: str
+    # Cuma terisi untuk foto serong, karena di situ yang terlihat memang satu sisi saja.
+    sisi_terlihat: str | None = None
+
+
+def _gabung_mask(part: list[MaskDeteksi], kelas: frozenset[str]) -> np.ndarray | None:
+    ada = [p.mask for p in part if p.kelas in kelas and p.luas > 0]
+    return np.logical_or.reduce(ada) if ada else None
+
+
+def lebar_kendaraan(part: list[MaskDeteksi]) -> int:
+    """Lebar kotak pembatas seluruh mask bagian, dalam piksel."""
+    ada = [p.mask for p in part if p.luas > 0]
+    if not ada:
+        return 0
+    kolom = np.nonzero(np.logical_or.reduce(ada))[1]
+    return int(kolom.max() - kolom.min() + 1)
+
+
+def arah_hadap(part: list[MaskDeteksi]) -> ArahHadap | None:
+    """Simpulkan mobil menghadap ke mana dari bagian yang terlihat dan posisinya.
+
+    Ujung depan dan ujung belakang punya penandanya masing-masing di daftar kelas model.
+    Kalau keduanya terlihat dan terpisah cukup jauh mendatar, mobilnya dilihat menyerong.
+    Kalau berimpit atau cuma satu yang terlihat, mobilnya dilihat tegak lurus dari salah
+    satu ujung, dan yang lebih luas menang.
+
+    Tanpa satu pun penanda, misalnya foto close-up fender saja, hasilnya None. Menebak di
+    situ berarti memberi label yang tidak punya dasar.
+    """
+    depan = _gabung_mask(part, PENANDA_DEPAN)
+    belakang = _gabung_mask(part, PENANDA_BELAKANG)
+    if depan is None and belakang is None:
+        return None
+    if belakang is None:
+        return ArahHadap("depan")
+    if depan is None:
+        return ArahHadap("belakang")
+
+    x_depan, x_belakang = pusat_x(depan), pusat_x(belakang)
+    lebar = lebar_kendaraan(part)
+    if lebar and abs(x_depan - x_belakang) >= AMBANG_SERONG * lebar:
+        # Moncong ke kiri foto berarti sisi kiri mobil yang menghadap kamera. Ini turunan
+        # dari perkalian silang arah atas dengan arah hadap, bukan kebiasaan.
+        return ArahHadap("serong", "kiri" if x_depan < x_belakang else "kanan")
+
+    luas_depan = int(np.count_nonzero(depan))
+    luas_belakang = int(np.count_nonzero(belakang))
+    return ArahHadap("depan" if luas_depan >= luas_belakang else "belakang")
+
+
+def tentukan_sisi(
+    kelas: str, mask: np.ndarray, pusat: float | None, arah: ArahHadap | None
+) -> str | None:
+    """Tentukan sisi kiri atau kanan menurut mobilnya sendiri, bukan menurut pemotret.
 
     Dataset yang dipakai tidak membedakan kiri dan kanan, yang ada cuma `Front-door`, jadi
-    sisinya dihitung, bukan dideteksi. Untuk biaya ini tidak berpengaruh karena harga kiri
-    dan kanan sama. Yang terpengaruh cuma ketepatan penamaan di laporan.
+    sisinya dihitung, bukan dideteksi. Kiri kanan di sini mengikuti konvensi bengkel: dilihat
+    oleh pengemudi yang menghadap depan, sehingga fender kanan tetap disebut kanan dari sudut
+    pengambilan mana pun.
 
-    Sisi ditentukan dari sudut pandang orang yang melihat foto, bukan dari sudut pandang
-    pengemudi. Ini pilihan sadar: adjuster melihat foto, bukan duduk di dalam mobil.
+    Karena itu arah hadap mobil harus diketahui lebih dulu. Dilihat dari belakang, kiri mobil
+    jatuh di kiri foto. Dilihat dari depan, keduanya bertukar. Dilihat menyerong, yang tampak
+    cuma satu sisi mobil, jadi seluruh bagian di foto itu dapat sisi yang sama.
+
+    Batasnya: pada foto serong, bagian sisi seberang yang ikut terlihat sedikit, misalnya
+    spion jauh, ikut dilabeli sisi yang dekat. Ini pilihan sadar, karena benar untuk
+    kebanyakan bagian di foto itu lebih berguna daripada benar untuk satu bagian saja.
     """
+    if kelas not in BAGIAN_BERSISI or arah is None:
+        return None
+    if arah.tampak == "serong":
+        return arah.sisi_terlihat
     if pusat is None:
         return None
     x = pusat_x(mask)
     if x is None:
         return None
-    # Bagian yang membentang melewati titik tengah, misalnya kap mesin atau bumper, tidak
-    # punya sisi. Memaksakan label kiri atau kanan untuk bagian itu justru menyesatkan.
+    # Bagian yang membentang melewati titik tengah tidak diberi sisi. Memaksakan label kiri
+    # atau kanan untuk bagian itu justru menyesatkan.
     kolom = np.nonzero(mask)[1]
     lebar = kolom.max() - kolom.min() + 1
     if abs(x - pusat) < lebar * 0.25:
         return None
-    return "kiri" if x < pusat else "kanan"
+    di_kiri_foto = x < pusat
+    if arah.tampak == "depan":
+        return "kanan" if di_kiri_foto else "kiri"
+    return "kiri" if di_kiri_foto else "kanan"
 
 
 def tumpuk(
@@ -154,6 +248,7 @@ def tumpuk(
     satu bagian. Kerusakan yang ujungnya cuma menyenggol bagian tetangga gagal di dua-duanya.
     """
     pusat = pusat_kendaraan(part)
+    arah = arah_hadap(part)
     hasil: list[TemuanGabungan] = []
 
     for i_d, d in enumerate(damage):
@@ -181,7 +276,7 @@ def tumpuk(
                 TemuanGabungan(
                     part_class=p.kelas,
                     damage_class=d.kelas,
-                    sisi=tentukan_sisi(p.mask, pusat),
+                    sisi=tentukan_sisi(p.kelas, p.mask, pusat, arah),
                     confidence_part=p.confidence,
                     confidence_damage=d.confidence,
                     luas_part_px=luas_p,
@@ -194,6 +289,34 @@ def tumpuk(
             )
 
     hasil.sort(key=lambda t: (t.part_class, t.sisi or "", t.damage_class))
+    return hasil
+
+
+def samakan_sisi(per_foto: list[list[TemuanGabungan]]) -> list[list[TemuanGabungan]]:
+    """Isi sisi yang kosong dengan sisi bagian yang sama dari foto lain di klaim ini.
+
+    Sisi ikut jadi kunci pengelompokan biaya, jadi satu fender yang sisinya kosong di satu
+    foto akan terhitung sebagai fender kedua dan tertagih dua kali. Fender kiri dan kanan
+    yang benar-benar sama-sama rusak tetap jadi dua baris, karena keduanya punya sisi.
+    """
+    bersisi: dict[str, list[TemuanGabungan]] = {}
+    for temuan_foto in per_foto:
+        for t in temuan_foto:
+            if t.sisi:
+                bersisi.setdefault(t.part_class, []).append(t)
+
+    hasil = []
+    for temuan_foto in per_foto:
+        baris = []
+        for t in temuan_foto:
+            acuan = bersisi.get(t.part_class) if t.sisi is None else None
+            if acuan:
+                # Kalau kedua sisi pernah terlihat, yang dipakai temuan dengan luas paling
+                # mirip, karena itu yang paling mungkin bagian fisik yang sama.
+                dekat = min(acuan, key=lambda a: abs(a.rasio_luas - t.rasio_luas))
+                t = replace(t, sisi=dekat.sisi)
+            baris.append(t)
+        hasil.append(baris)
     return hasil
 
 

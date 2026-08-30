@@ -150,7 +150,8 @@ def test_hitungan_foto_dari_overlay_dipakai_cek_konsistensi(s):
     _, jumlah_foto = ringkas_antar_foto(per_foto)
 
     assert jumlah_foto[("Hood", None)] == 4
-    assert jumlah_foto[("Headlight", "kanan")] == 1
+    # Fotonya tampak depan, jadi lampu di kanan gambar adalah lampu kiri mobil.
+    assert jumlah_foto[("Headlight", "kiri")] == 1
 
     # Angka itu yang membuat cek C3 menandai headlamp kanan.
     foto_cek = [

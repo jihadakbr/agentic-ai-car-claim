@@ -10,9 +10,11 @@ import pytest
 
 from app.pipeline.overlay import (
     MaskDeteksi,
+    arah_hadap,
     pusat_kendaraan,
     pusat_x,
     ringkas_antar_foto,
+    samakan_sisi,
     tentukan_sisi,
     tumpuk,
 )
@@ -100,28 +102,92 @@ def test_mask_kosong_dilewati_tanpa_error():
     assert tumpuk(part, damage) == []
 
 
-def test_sisi_ditentukan_dari_titik_tengah_mobil():
-    """Titik tengah mobil dipakai, bukan titik tengah gambar, karena mobil sering tidak di tengah."""
-    part = [
+def sisi_dari(part: list[MaskDeteksi], indeks: int) -> str | None:
+    """Sisi satu bagian, dihitung seperti `tumpuk` menghitungnya."""
+    return tentukan_sisi(
+        part[indeks].kelas, part[indeks].mask, pusat_kendaraan(part), arah_hadap(part)
+    )
+
+
+def mobil_dari_depan() -> list[MaskDeteksi]:
+    """Kap mesin dan dua lampu depan, tanpa penanda belakang sama sekali."""
+    return [
         MaskDeteksi("Hood", 0.9, kotak(40, 0, 160, 40)),
         MaskDeteksi("Headlight", 0.9, kotak(45, 40, 75, 60)),
         MaskDeteksi("Headlight", 0.9, kotak(125, 40, 155, 60)),
     ]
-    pusat = pusat_kendaraan(part)
 
-    assert tentukan_sisi(part[1].mask, pusat) == "kiri"
-    assert tentukan_sisi(part[2].mask, pusat) == "kanan"
+
+def mobil_dari_belakang() -> list[MaskDeteksi]:
+    return [
+        MaskDeteksi("Trunk", 0.9, kotak(40, 0, 160, 40)),
+        MaskDeteksi("Tail-light", 0.9, kotak(45, 40, 75, 60)),
+        MaskDeteksi("Tail-light", 0.9, kotak(125, 40, 155, 60)),
+    ]
+
+
+def mobil_serong(moncong_di_kiri: bool) -> list[MaskDeteksi]:
+    """Mobil dilihat menyerong, ujung depan dan belakang terpisah jauh mendatar."""
+    depan, belakang = (20, 150) if moncong_di_kiri else (150, 20)
+    return [
+        MaskDeteksi("Hood", 0.9, kotak(depan, 10, depan + 30, 40)),
+        MaskDeteksi("Headlight", 0.9, kotak(depan, 40, depan + 25, 60)),
+        MaskDeteksi("Trunk", 0.9, kotak(belakang, 10, belakang + 30, 40)),
+        MaskDeteksi("Back-window", 0.9, kotak(belakang, 40, belakang + 25, 60)),
+        MaskDeteksi("Fender", 0.9, kotak(depan - 5, 60, depan + 35, 80)),
+        MaskDeteksi("Quarter-panel", 0.9, kotak(belakang - 5, 60, belakang + 35, 80)),
+    ]
+
+
+def test_dilihat_dari_belakang_kiri_mobil_ada_di_kiri_foto():
+    """Berdiri di belakang mobil, sisi kirinya memang ada di sebelah kiri kita."""
+    part = mobil_dari_belakang()
+    assert sisi_dari(part, 1) == "kiri"
+    assert sisi_dari(part, 2) == "kanan"
+
+
+def test_dilihat_dari_depan_kiri_mobil_pindah_ke_kanan_foto():
+    """Maju ke depan mobil dan keduanya bertukar. Ini yang dulu salah."""
+    part = mobil_dari_depan()
+    assert sisi_dari(part, 1) == "kanan"
+    assert sisi_dari(part, 2) == "kiri"
+
+
+def test_foto_serong_memberi_satu_sisi_yang_sama_ke_semua_bagian():
+    """Yang terlihat cuma satu sisi mobil, jadi membelahnya per posisi di foto keliru."""
+    part = mobil_serong(moncong_di_kiri=True)
+
+    # Fender di ujung kiri gambar, quarter panel di ujung kanan, tapi keduanya sisi kiri.
+    assert sisi_dari(part, 4) == "kiri"
+    assert sisi_dari(part, 5) == "kiri"
+
+
+def test_foto_serong_dengan_moncong_di_kanan_memberi_sisi_kanan():
+    part = mobil_serong(moncong_di_kiri=False)
+    assert sisi_dari(part, 4) == "kanan"
+    assert sisi_dari(part, 5) == "kanan"
+
+
+def test_bagian_yang_cuma_ada_satu_tidak_pernah_diberi_sisi():
+    """Kap mesin cuma ada satu per mobil, jadi label kiri atau kanan pasti salah."""
+    assert sisi_dari(mobil_dari_depan(), 0) is None
+    assert sisi_dari(mobil_serong(moncong_di_kiri=True), 0) is None
+
+
+def test_sisi_kosong_kalau_arah_hadap_tidak_terbaca():
+    """Close-up fender tanpa lampu, kap, bagasi, atau roda. Menebak di sini tidak berdasar."""
+    part = [MaskDeteksi("Fender", 0.9, kotak(20, 20, 80, 60))]
+    assert arah_hadap(part) is None
+    assert sisi_dari(part, 0) is None
 
 
 def test_bagian_yang_membentang_di_tengah_tidak_diberi_sisi():
-    """Kap mesin membentang melewati tengah, memaksakan label kiri atau kanan menyesatkan."""
-    part = [MaskDeteksi("Hood", 0.9, kotak(40, 0, 160, 40))]
-    pusat = pusat_kendaraan(part)
-    assert tentukan_sisi(part[0].mask, pusat) is None
-
-
-def test_sisi_none_kalau_tidak_ada_acuan():
-    assert tentukan_sisi(kotak(0, 0, 10, 10), None) is None
+    """Spion yang mask-nya menutupi tengah mobil tidak dipaksa punya sisi."""
+    part = [
+        MaskDeteksi("Hood", 0.9, kotak(40, 0, 160, 40)),
+        MaskDeteksi("Mirror", 0.9, kotak(40, 40, 160, 60)),
+    ]
+    assert sisi_dari(part, 1) is None
 
 
 def test_dua_headlamp_jadi_dua_temuan_berbeda_sisi():
@@ -174,7 +240,35 @@ def test_ringkas_menghitung_foto_per_bagian_untuk_cek_konsistensi():
     _, jumlah_foto = ringkas_antar_foto([foto1, foto2, foto3])
 
     assert jumlah_foto[("Hood", None)] == 3
-    assert jumlah_foto[("Headlight", "kanan")] == 1
+    assert jumlah_foto[("Headlight", "kiri")] == 1
+
+
+def test_sisi_kosong_diisi_dari_foto_lain_supaya_tidak_tertagih_dua_kali():
+    """Fender yang sama tidak boleh jadi dua baris cuma karena satu foto tidak jelas arahnya."""
+    jelas = mobil_serong(moncong_di_kiri=True)
+    fender = jelas[4]
+    kabur = [MaskDeteksi("Fender", 0.9, fender.mask)]
+    penyok = [MaskDeteksi("Dent", 0.9, kotak(20, 60, 40, 80))]
+
+    per_foto = samakan_sisi([tumpuk(jelas, penyok), tumpuk(kabur, penyok)])
+    hasil, jumlah_foto = ringkas_antar_foto(per_foto)
+
+    assert [t.sisi for t in hasil if t.part_class == "Fender"] == ["kiri"]
+    assert jumlah_foto[("Fender", "kiri")] == 2
+
+
+def test_dua_fender_yang_benar_benar_rusak_tetap_dua_baris():
+    """Penyeragaman sisi tidak boleh menggabungkan bagian yang memang ada dua."""
+    part = mobil_dari_depan()
+    lampu = [
+        MaskDeteksi("Broken part", 0.9, kotak(45, 40, 75, 60)),
+        MaskDeteksi("Broken part", 0.9, kotak(125, 40, 155, 60)),
+    ]
+
+    hasil, _ = ringkas_antar_foto(samakan_sisi([tumpuk(part, lampu)]))
+    headlamp = [t for t in hasil if t.part_class == "Headlight"]
+
+    assert {t.sisi for t in headlamp} == {"kiri", "kanan"}
 
 
 def test_ringkas_tanpa_foto_menghasilkan_daftar_kosong():

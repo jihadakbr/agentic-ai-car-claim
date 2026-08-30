@@ -362,12 +362,16 @@ def cari_kerusakan_lama(
 
     Yang dibandingkan bagian, sisi, jenis kerusakan, dan luasnya. Luas ikut karena bagian
     yang sudah diperbaiki lalu rusak lagi hampir selalu punya luas yang berbeda jauh.
+
+    Sisi yang kosong di salah satu pihak cocok dengan sisi mana pun. Pemeriksaan ini
+    bertugas menangkap kerusakan lama yang belum diperbaiki, dan melewatkannya lebih
+    merugikan daripada menandainya untuk ditinjau adjuster.
     """
     kandidat = [
         r
         for r in riwayat
-        if (r.part_class, r.sisi, r.damage_class)
-        == (temuan.part_class, temuan.sisi, temuan.damage_class)
+        if (r.part_class, r.damage_class) == (temuan.part_class, temuan.damage_class)
+        and (r.sisi is None or temuan.sisi is None or r.sisi == temuan.sisi)
         and abs(r.rasio_luas - temuan.rasio_luas) <= selisih_maks
     ]
     if not kandidat:

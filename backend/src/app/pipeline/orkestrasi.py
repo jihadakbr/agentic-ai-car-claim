@@ -45,6 +45,7 @@ from app.pipeline.overlay import (
     bentuk_json,
     ke_temuan_biaya,
     ringkas_antar_foto,
+    samakan_sisi,
     tumpuk,
 )
 from app.pipeline.validity import (
@@ -361,20 +362,18 @@ def proses(
     per_foto = []
     gambar_overlay: list[Image.Image] = []
     bentuk_overlay: list[dict] = []
-    foto_cek: list[FotoKerusakan] = []
     with _ukur(waktu, "deteksi"):
         # Seluruh foto satu klaim dijalankan sekali panggil. Di Hugging Face ZeroGPU biaya
         # tetap pengalokasian GPU dibayar tiap panggilan, jadi memanggilnya per foto membayar
         # biaya itu berulang untuk pekerjaan yang sama.
         semua = detektor.deteksi_banyak([s.gambar for s in siap])
-        for i, (s, hasil) in enumerate(zip(siap, semua, strict=True)):
-            gabung = tumpuk(
+        for s, hasil in zip(siap, semua, strict=True):
+            per_foto.append(tumpuk(
                 hasil.part,
                 hasil.damage,
                 ambang_irisan=0.30,
                 bagian_diabaikan=frozenset(BAGIAN_BUKAN_KLAIM),
-            )
-            per_foto.append(gabung)
+            ))
             gambar_overlay.append(
                 overlay_visual.gambar(
                     s.gambar, hasil.part, hasil.damage, frozenset(BAGIAN_BUKAN_KLAIM),
@@ -385,18 +384,25 @@ def proses(
                 "part": bentuk_json(hasil.part),
                 "damage": bentuk_json(hasil.damage),
             })
-            foto_cek.append(
-                FotoKerusakan(
-                    id=f"foto-{i}",
-                    phash=s.phash,
-                    confidence_kendaraan=hasil.confidence_kendaraan,
-                    plat_terbaca=masukan.stnk.nomor_polisi,
-                    temuan=[
-                        TemuanFoto(t.part_class, t.damage_class, t.confidence_damage, t.sisi)
-                        for t in gabung
-                    ],
-                )
+
+        # Sisi diseragamkan sebelum dipakai siapa pun. Foto yang arah hadapnya tidak
+        # terbaca meninggalkan sisi kosong, dan kalau dibiarkan bagian yang sama terhitung
+        # dua kali di biaya maupun di cek antar sudut.
+        per_foto = samakan_sisi(per_foto)
+
+        foto_cek = [
+            FotoKerusakan(
+                id=f"foto-{i}",
+                phash=s.phash,
+                confidence_kendaraan=hasil.confidence_kendaraan,
+                plat_terbaca=masukan.stnk.nomor_polisi,
+                temuan=[
+                    TemuanFoto(t.part_class, t.damage_class, t.confidence_damage, t.sisi)
+                    for t in gabung
+                ],
             )
+            for i, (s, hasil, gabung) in enumerate(zip(siap, semua, per_foto, strict=True))
+        ]
 
         ringkas, jumlah_foto = ringkas_antar_foto(per_foto)
 

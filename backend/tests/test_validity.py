@@ -380,6 +380,27 @@ def test_c7_sisi_berbeda_tidak_ditandai():
     assert h.lolos
 
 
+def test_c7_sisi_yang_kosong_cocok_dengan_sisi_mana_pun():
+    """Foto yang arah hadapnya tidak terbaca tidak boleh membuat kerusakan lama lolos."""
+    h = cek_c7_bagian_pernah_diklaim(
+        [temuan("Fender", "Dent", 0.22)],
+        [riwayat("Fender", "Dent", 0.22, sisi="kiri")],
+        Ambang(),
+    )
+    assert not h.lolos
+    assert h.tingkat == SOFT
+
+
+def test_c7_riwayat_lama_tanpa_sisi_tetap_cocok():
+    """Klaim yang tersimpan sebelum sisi dicatat tetap harus bisa dibandingkan."""
+    h = cek_c7_bagian_pernah_diklaim(
+        [temuan("Fender", "Dent", 0.22, sisi="kanan")],
+        [riwayat("Fender", "Dent", 0.22)],
+        Ambang(),
+    )
+    assert not h.lolos
+
+
 def test_c7_memilih_riwayat_yang_paling_dekat():
     """Kalau ada beberapa yang cocok, yang ditunjuk harus yang luasnya paling mirip."""
     h = cek_c7_bagian_pernah_diklaim(
