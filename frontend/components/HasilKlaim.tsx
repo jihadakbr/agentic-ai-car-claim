@@ -83,10 +83,8 @@ function KartuBiaya({ klaim }: { klaim: DetailKlaim }) {
               <th>Bagian mobil</th>
               <th>Kerusakan</th>
               <th>Operasi</th>
-              <th className="angka">Jam</th>
               <th className="angka">Part</th>
               <th className="angka">Jasa</th>
-              <th>Sumber</th>
             </tr>
           </thead>
           <tbody>
@@ -104,19 +102,16 @@ function KartuBiaya({ klaim }: { klaim: DetailKlaim }) {
                   {r.kerusakan_lain ? ` (+ ${r.kerusakan_lain})` : ""}
                 </td>
                 <td>{r.operasi}</td>
-                <td className="angka">{r.jam_standar}</td>
                 <td className="angka">{rupiah(r.harga_part)}</td>
                 <td className="angka">{rupiah(r.biaya_jasa)}</td>
-                <td>{LABEL_SUMBER[r.sumber] ?? r.sumber}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <th colSpan={4}>Total</th>
+              <th colSpan={3}>Total</th>
               <th className="angka">{rupiah(b.total_part)}</th>
               <th className="angka">{rupiah(b.total_jasa)}</th>
-              <th />
             </tr>
           </tfoot>
         </table>
@@ -157,15 +152,6 @@ function KartuBiaya({ klaim }: { klaim: DetailKlaim }) {
  *  Surveyor perlu tahu apakah kiriman fotonya diterima dan apakah ada yang harus difoto
  *  ulang. Angka biaya, rekomendasi mesin, penilaian agent, dan narasinya adalah bahan
  *  pengambilan keputusan, dan itu wewenang adjuster. */
-// Baris "aturan" ditampilkan sebagai Simulasi karena memang tidak berasal dari foto.
-// Komponen di balik bodi belum bisa dideteksi model, jadi barisnya dimasukkan aturan
-// sebagai gambaran hasil kalau kemampuan itu nanti ada.
-const LABEL_SUMBER: Record<string, string> = {
-  deteksi: "Deteksi AI",
-  aturan: "Simulasi",
-  agent: "Agent",
-};
-
 export default function HasilKlaim({
   klaim,
   untuk = "adjuster",

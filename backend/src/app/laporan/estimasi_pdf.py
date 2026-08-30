@@ -94,24 +94,9 @@ def _label_operasi(baris: dict) -> str:
     return f"{keterangan} ({operasi})" if operasi else keterangan
 
 
-# Label kolom Sumber. Nilai "aturan" ditampilkan sebagai Simulasi karena baris itu memang
-# tidak berasal dari foto: komponen di balik bodi belum bisa dideteksi model, jadi barisnya
-# dimasukkan aturan sebagai gambaran hasil kalau kemampuan itu nanti ada.
-LABEL_SUMBER = {
-    "deteksi": "Deteksi AI",
-    "aturan": "Simulasi",
-    "agent": "Agent",
-}
-
-
-def _label_sumber(baris: dict) -> str:
-    sumber = baris.get("sumber") or "deteksi"
-    return LABEL_SUMBER.get(sumber, sumber.capitalize())
-
-
 def _tabel_rincian(baris_biaya: list[dict], biaya: dict, g: dict) -> Table:
     kepala = [Paragraph(t, g["kepala"]) for t in
-              ("NO", "NAMA PART", "JASA", "NO. PART", "HARGA", "SUMBER")]
+              ("NO", "NAMA PART", "JASA", "NO. PART", "HARGA")]
     isi = [kepala]
     for i, b in enumerate(baris_biaya, start=1):
         isi.append([
@@ -120,7 +105,6 @@ def _tabel_rincian(baris_biaya: list[dict], biaya: dict, g: dict) -> Table:
             Paragraph(rupiah(b.get("biaya_jasa")), g["sel"]),
             Paragraph(b.get("nomor_part") or "-", g["sel"]),
             Paragraph(rupiah(b.get("harga_part")), g["sel"]),
-            Paragraph(_label_sumber(b), g["sel"]),
         ])
 
     isi.append([
@@ -129,12 +113,11 @@ def _tabel_rincian(baris_biaya: list[dict], biaya: dict, g: dict) -> Table:
         Paragraph(rupiah(biaya.get("total_jasa")), g["kepala"]),
         Paragraph("", g["sel"]),
         Paragraph(rupiah(biaya.get("total_part")), g["kepala"]),
-        Paragraph("", g["sel"]),
     ])
 
     t = Table(
         isi,
-        colWidths=[9 * mm, 62 * mm, 28 * mm, 30 * mm, 28 * mm, 23 * mm],
+        colWidths=[9 * mm, 85 * mm, 28 * mm, 30 * mm, 28 * mm],
         repeatRows=1,
     )
     t.setStyle(TableStyle([

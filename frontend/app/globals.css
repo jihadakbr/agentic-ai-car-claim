@@ -321,6 +321,19 @@ select {
   color: var(--teks);
 }
 
+/* Kendali yang bisa diklik memakai kursor tangan. Bawaan browser untuk select dan kotak
+   centang adalah panah biasa, sehingga keduanya tidak terlihat bisa ditekan. Aturan disabled
+   di bawah ditulis belakangan supaya tetap menang dan memakai kursor terlarang. */
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+input[type="file"],
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  cursor: pointer;
+}
+
 input:focus,
 select:focus,
 textarea:focus {
