@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from app.pipeline.overlay import (
+    ArahHadap,
     MaskDeteksi,
     arah_hadap,
     pusat_kendaraan,
@@ -139,6 +140,18 @@ def mobil_serong(moncong_di_kiri: bool) -> list[MaskDeteksi]:
     ]
 
 
+def mobil_samping_separuh_depan(moncong_di_kiri: bool) -> list[MaskDeteksi]:
+    """Separuh depan mobil dari samping, tanpa satu pun bagian belakang di foto."""
+    ujung, badan = (20, 120) if moncong_di_kiri else (150, 20)
+    return [
+        MaskDeteksi("Hood", 0.9, kotak(ujung, 10, ujung + 30, 35)),
+        MaskDeteksi("Headlight", 0.9, kotak(ujung, 35, ujung + 25, 55)),
+        MaskDeteksi("Fender", 0.9, kotak(ujung, 55, ujung + 30, 80)),
+        MaskDeteksi("Front-door", 0.9, kotak(badan, 30, badan + 60, 70)),
+        MaskDeteksi("Rocker-panel", 0.9, kotak(badan, 70, badan + 60, 85)),
+    ]
+
+
 def test_dilihat_dari_belakang_kiri_mobil_ada_di_kiri_foto():
     """Berdiri di belakang mobil, sisi kirinya memang ada di sebelah kiri kita."""
     part = mobil_dari_belakang()
@@ -166,6 +179,47 @@ def test_foto_serong_dengan_moncong_di_kanan_memberi_sisi_kanan():
     part = mobil_serong(moncong_di_kiri=False)
     assert sisi_dari(part, 4) == "kanan"
     assert sisi_dari(part, 5) == "kanan"
+
+
+def test_foto_samping_tanpa_bagian_belakang_tetap_terbaca_serong():
+    """Separuh depan mobil dari samping. Dulu dikira tampak depan lurus, lalu sisinya
+    dibelah per posisi di foto sehingga satu mobil dapat kiri dan kanan sekaligus."""
+    part = mobil_samping_separuh_depan(moncong_di_kiri=False)
+    assert arah_hadap(part) == ArahHadap("serong", "kanan")
+    assert {sisi_dari(part, i) for i in range(2, len(part))} == {"kanan"}
+
+
+def test_foto_samping_dengan_moncong_di_kiri_memberi_sisi_kiri():
+    part = mobil_samping_separuh_depan(moncong_di_kiri=True)
+    assert arah_hadap(part) == ArahHadap("serong", "kiri")
+    assert {sisi_dari(part, i) for i in range(2, len(part))} == {"kiri"}
+
+
+def test_foto_samping_separuh_belakang_ikut_terbaca_serong():
+    """Buritan di kanan foto berarti moncongnya di kiri, jadi sisi kiri yang terlihat."""
+    part = [
+        MaskDeteksi("Trunk", 0.9, kotak(150, 10, 180, 35)),
+        MaskDeteksi("Tail-light", 0.9, kotak(155, 35, 180, 55)),
+        MaskDeteksi("Quarter-panel", 0.9, kotak(150, 55, 180, 80)),
+        MaskDeteksi("Back-door", 0.9, kotak(20, 30, 80, 70)),
+        MaskDeteksi("Rocker-panel", 0.9, kotak(20, 70, 80, 85)),
+    ]
+    assert arah_hadap(part) == ArahHadap("serong", "kiri")
+    assert sisi_dari(part, 2) == "kiri"
+
+
+def test_tampak_depan_lurus_tidak_ikut_terbaca_serong():
+    """Pintu yang ikut terlihat sedikit di kedua sisi tidak menggeser titik tengahnya."""
+    part = [
+        MaskDeteksi("Hood", 0.9, kotak(40, 0, 160, 40)),
+        MaskDeteksi("Headlight", 0.9, kotak(45, 40, 75, 60)),
+        MaskDeteksi("Headlight", 0.9, kotak(125, 40, 155, 60)),
+        MaskDeteksi("Front-door", 0.9, kotak(30, 40, 45, 80)),
+        MaskDeteksi("Front-door", 0.9, kotak(155, 40, 170, 80)),
+    ]
+    assert arah_hadap(part) == ArahHadap("depan")
+    assert sisi_dari(part, 1) == "kanan"
+    assert sisi_dari(part, 2) == "kiri"
 
 
 def test_bagian_yang_cuma_ada_satu_tidak_pernah_diberi_sisi():

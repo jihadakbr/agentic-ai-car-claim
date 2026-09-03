@@ -22,15 +22,18 @@ import numpy as np
 
 from app.pipeline.cost_engine import Temuan
 
-# Bagian yang menandai ujung depan dan ujung belakang mobil. Dipakai menyimpulkan mobilnya
+# Bagian yang menandai ujung mobil, moncong dan buritan. Dipakai menyimpulkan mobilnya
 # menghadap ke mana di sebuah foto, karena datasetnya tidak punya kelas kiri dan kanan.
-PENANDA_DEPAN = frozenset({
-    "Windshield", "Hood", "Grille", "Headlight", "Front-bumper",
-    "Front-window", "Front-door", "Front-wheel",
-})
-PENANDA_BELAKANG = frozenset({
-    "Back-windshield", "Trunk", "Tail-light", "Back-bumper",
-    "Back-window", "Back-door", "Back-wheel",
+# Isinya sengaja cuma bagian yang benar-benar ada di ujung: pintu dan kaca samping ada di
+# tengah badan, jadi kalau ikut masuk, titik ujungnya tertarik ke tengah dan tidak terukur.
+UJUNG_DEPAN = frozenset({"Grille", "Front-bumper", "Headlight", "Hood"})
+UJUNG_BELAKANG = frozenset({"Back-bumper", "Tail-light", "Trunk", "Back-windshield"})
+
+# Bagian yang praktis cuma kelihatan kalau mobilnya dipotret dari samping. Dipakai waktu
+# cuma satu ujung yang terlihat, sebagai pembanding posisi untuk ujung yang tidak terlihat.
+PENANDA_SAMPING = frozenset({
+    "Rocker-panel", "Front-door", "Back-door", "Quarter-panel",
+    "Front-window", "Back-window",
 })
 
 # Bagian yang memang ada sepasang di mobil. Di luar daftar ini sisi selalu kosong, karena
@@ -155,33 +158,46 @@ def lebar_kendaraan(part: list[MaskDeteksi]) -> int:
 def arah_hadap(part: list[MaskDeteksi]) -> ArahHadap | None:
     """Simpulkan mobil menghadap ke mana dari bagian yang terlihat dan posisinya.
 
-    Ujung depan dan ujung belakang punya penandanya masing-masing di daftar kelas model.
-    Kalau keduanya terlihat dan terpisah cukup jauh mendatar, mobilnya dilihat menyerong.
-    Kalau berimpit atau cuma satu yang terlihat, mobilnya dilihat tegak lurus dari salah
-    satu ujung, dan yang lebih luas menang.
+    Moncong dan buritan punya penandanya masing-masing di daftar kelas model. Kalau keduanya
+    terlihat dan terpisah cukup jauh mendatar, mobilnya dilihat menyerong.
 
-    Tanpa satu pun penanda, misalnya foto close-up fender saja, hasilnya None. Menebak di
-    situ berarti memberi label yang tidak punya dasar.
+    Sering cuma satu ujung yang terlihat, misalnya foto samping bagian depan mobil: ada
+    lampu depan dan kap, tapi tidak ada satu pun bagian belakang. Foto seperti itu tetap
+    serong, dan pembandingnya bagian samping seperti rocker panel atau pintu, yang duduk di
+    tengah badan. Arah dari ujung ke bagian tengah itu sudah menunjukkan moncongnya ke mana.
+    Tanpa bagian samping, mobilnya memang dilihat tegak lurus dari salah satu ujung.
+
+    Tanpa satu pun penanda ujung, misalnya foto close-up fender saja, hasilnya None.
+    Menebak di situ berarti memberi label yang tidak punya dasar.
     """
-    depan = _gabung_mask(part, PENANDA_DEPAN)
-    belakang = _gabung_mask(part, PENANDA_BELAKANG)
+    depan = _gabung_mask(part, UJUNG_DEPAN)
+    belakang = _gabung_mask(part, UJUNG_BELAKANG)
     if depan is None and belakang is None:
         return None
-    if belakang is None:
-        return ArahHadap("depan")
-    if depan is None:
-        return ArahHadap("belakang")
-
-    x_depan, x_belakang = pusat_x(depan), pusat_x(belakang)
     lebar = lebar_kendaraan(part)
-    if lebar and abs(x_depan - x_belakang) >= AMBANG_SERONG * lebar:
-        # Moncong ke kiri foto berarti sisi kiri mobil yang menghadap kamera. Ini turunan
-        # dari perkalian silang arah atas dengan arah hadap, bukan kebiasaan.
-        return ArahHadap("serong", "kiri" if x_depan < x_belakang else "kanan")
 
-    luas_depan = int(np.count_nonzero(depan))
-    luas_belakang = int(np.count_nonzero(belakang))
-    return ArahHadap("depan" if luas_depan >= luas_belakang else "belakang")
+    if depan is not None and belakang is not None:
+        x_depan, x_belakang = pusat_x(depan), pusat_x(belakang)
+        if lebar and abs(x_depan - x_belakang) >= AMBANG_SERONG * lebar:
+            # Moncong ke kiri foto berarti sisi kiri mobil yang menghadap kamera. Ini
+            # turunan dari perkalian silang arah atas dengan arah hadap, bukan kebiasaan.
+            return ArahHadap("serong", "kiri" if x_depan < x_belakang else "kanan")
+        luas_depan = int(np.count_nonzero(depan))
+        luas_belakang = int(np.count_nonzero(belakang))
+        return ArahHadap("depan" if luas_depan >= luas_belakang else "belakang")
+
+    samping = _gabung_mask(part, PENANDA_SAMPING)
+    tampak_ujung = "depan" if belakang is None else "belakang"
+    if samping is None or not lebar:
+        return ArahHadap(tampak_ujung)
+
+    x_ujung = pusat_x(depan if belakang is None else belakang)
+    x_samping = pusat_x(samping)
+    if abs(x_ujung - x_samping) < AMBANG_SERONG * lebar:
+        return ArahHadap(tampak_ujung)
+    ujung_di_kiri = x_ujung < x_samping
+    moncong_di_kiri = ujung_di_kiri if belakang is None else not ujung_di_kiri
+    return ArahHadap("serong", "kiri" if moncong_di_kiri else "kanan")
 
 
 def tentukan_sisi(
