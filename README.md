@@ -39,6 +39,8 @@ Two Ultralytics YOLO11s-seg instance segmentation models trained on the Humans i
 
 `gpt-oss-20b` on Groq with a free OpenRouter tier as fallback serves both agents and the LLM steps, Qwen 2.5 through Ollama is the on-premise path, and RapidOCR reads the registration document.
 
+Every registration document (STNK) shown in this repository, the demo, and the video is synthetic and is not a valid document. No OCR model was trained here, so no real registration data was ever needed. Only the sheet layout is reused, and every value on it is invented: owner name, address, plate, chassis and engine numbers, document and queue numbers, issuing officer. The QR code and barcode are not encodings at all, just random blocks drawn in their place. Every official marking is covered by a flat grey box, including the police emblem, the hologram, the security band, the institution name, the document title, the signing officer's post, and the validation box, and each sheet carries a diagonal `CONTOH - DATA SINTETIS / BUKAN DOKUMEN SAH` band. Do not use these images as if they were genuine documents.
+
 ## Tech Stack
 
 | Layer | Technology |

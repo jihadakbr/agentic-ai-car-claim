@@ -19,6 +19,7 @@ surveyor sambil berdiri di bengkel: miring, kena bayangan, kadang STNK-nya sudah
 
 from __future__ import annotations
 
+import math
 import os
 import random
 from dataclasses import asdict, dataclass
@@ -39,6 +40,7 @@ _KANDIDAT_FONT = [
 ]
 
 
+@lru_cache(maxsize=64)
 def _font(ukuran: int) -> ImageFont.ImageFont:
     """Ambil font yang tersedia di sistem, dengan cadangan font bawaan PIL.
 
@@ -244,6 +246,40 @@ _KOTAK_SANDI = [
 # pemisahan ini, menempelkan potongan stempel apa adanya ikut mengembalikan nomor aslinya.
 _STEMPEL = (1100, 100, 1252, 194)
 
+# Bagian resmi lembar: lambang Polri, emblem hologram, pita pengaman tepi kanan, nama
+# instansi di kepala lembar, dan jabatan penanda tangan. Ditimpa kotak abu-abu rata, bukan
+# ditambal mulus seperti kotak lain: di sini bekas suntingan justru yang diinginkan, supaya
+# lembar hasil tidak bisa dipotong lalu dipakai orang lain sebagai bahan lembar palsu.
+_LAMBANG = [
+    (82, 14, 220, 142),
+    (1660, 80, 1792, 230),
+    (1938, 14, 2052, 582),
+    # Dipisah per baris supaya label "No." dan "TELITI ULANG" di sebelah kanannya tidak
+    # ikut tertutup.
+    (312, 60, 945, 92),
+    (465, 92, 785, 112),
+    (218, 118, 1035, 147),
+    (398, 146, 860, 166),
+    (1336, 74, 1604, 108),
+    (1380, 110, 1620, 138),
+    # Cetakan bayangan "STNK" di bawah emblem hologram.
+    (1626, 240, 1832, 305),
+    # Kotak pengesahan, berikut stempel perpanjangan di dalamnya.
+    (1572, 314, 1958, 516),
+]
+_ABU = (148, 148, 148)
+
+_TEKS_CONTOH = ["CONTOH - DATA SINTETIS", "BUKAN DOKUMEN SAH"]
+
+# Pita ditaruh di pojok kanan bawah, bukan melintang penuh: teks besar yang memotong kolom
+# nilai ikut terbaca sebagai baris dan menggeser pemetaan field. Pojok ini cuma berisi kotak
+# pengesahan dan tanggal berlaku, jadi pitanya boleh tebal tanpa mengganggu pengukuran.
+_KOTAK_PITA = (1300, 430, 1980, 600)
+_SUDUT_PITA = 15
+_ALPHA_PITA = 180
+_TEBAL_PITA = 2
+_WARNA_PITA = (150, 30, 30)
+
 _KOTA = ["SEMARANG", "BANDUNG", "SURABAYA", "MEDAN", "MAKASSAR", "DENPASAR", "PALEMBANG"]
 _BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
           "September", "Oktober", "November", "Desember"]
@@ -402,6 +438,51 @@ def _tempel_stempel(img: Image.Image, asli: Image.Image) -> None:
     img.paste(Image.fromarray(campur.astype(np.uint8)), (x0, y0))
 
 
+def _timpa_lambang(d: ImageDraw.ImageDraw) -> None:
+    """Tutup lambang resmi dengan kotak abu-abu rata."""
+    for kotak in _LAMBANG:
+        d.rectangle(kotak, fill=_ABU)
+
+
+def _pita_contoh(img: Image.Image) -> Image.Image:
+    """Tempelkan pita penanda contoh di pojok kanan bawah lembar.
+
+    Digambar di layer terpisah lalu diputar, karena memutar teks langsung di atas lembar ikut
+    memutar lembarnya. Isian hurufnya dibiarkan tembus dan cuma garis tepinya yang berwarna,
+    supaya terbaca sebagai tanda di kertas dan bukan sebagai isian lembar.
+    """
+    x0, y0, x1, y1 = _KOTAK_PITA
+    ukur = ImageDraw.Draw(Image.new("L", (1, 1)))
+    lebar_sasaran = (x1 - x0) * math.cos(math.radians(_SUDUT_PITA))
+    terpanjang = max(_TEKS_CONTOH, key=len)
+
+    ukuran = 8
+    while ukur.textlength(terpanjang, font=_font(ukuran + 2)) < lebar_sasaran:
+        ukuran += 2
+
+    f = _font(ukuran)
+    jarak_baris = int(ukuran * 1.25)
+    lebar_teks = max(int(ukur.textlength(t, font=f)) for t in _TEKS_CONTOH) + 2 * _TEBAL_PITA
+    layer = Image.new(
+        "RGBA", (lebar_teks, jarak_baris * len(_TEKS_CONTOH) + 2 * _TEBAL_PITA), (0, 0, 0, 0)
+    )
+    dl = ImageDraw.Draw(layer)
+    for i, teks in enumerate(_TEKS_CONTOH):
+        dl.text(
+            (_TEBAL_PITA, _TEBAL_PITA + i * jarak_baris), teks, font=f, fill=(0, 0, 0, 0),
+            stroke_width=_TEBAL_PITA, stroke_fill=(*_WARNA_PITA, _ALPHA_PITA),
+        )
+    layer = layer.rotate(_SUDUT_PITA, resample=Image.BICUBIC, expand=True)
+
+    hasil = img.convert("RGBA")
+    hasil.paste(
+        layer,
+        ((x0 + x1 - layer.width) // 2, (y0 + y1 - layer.height) // 2),
+        layer,
+    )
+    return hasil.convert("RGB")
+
+
 def render_dari_acuan(data: DataStnk, rng: random.Random) -> Image.Image:
     """Gambar satu lembar STNK di atas templat foto acuan."""
     asli = Image.open(TEMPLAT).convert("RGB")
@@ -415,6 +496,11 @@ def render_dari_acuan(data: DataStnk, rng: random.Random) -> Image.Image:
     d = ImageDraw.Draw(img)
     for kotak in _KOTAK_SANDI:
         _gambar_sandi(d, kotak, rng)
+    _timpa_lambang(d)
+
+    # Pita ditempel sebelum isian supaya nilai di pojok itu tergambar penuh di atasnya.
+    img = _pita_contoh(img)
+    d = ImageDraw.Draw(img)
 
     nilai = data.sebagai_jawaban_benar() | _nilai_pengisi(data, rng)
     for kunci, (kotak, batas) in list(_FIELD.items()) + list(_PENGISI.items()):
