@@ -78,11 +78,12 @@ POLIS_BERPASANGAN = "POL-2025-0203"
 # terpilih dan kebetulan cocok.
 #
 # Folder 7 dan 8 dipilih dengan mengukur hasil deteksinya, bukan dilihat sekilas. Keduanya
-# menghasilkan Front-door sisi kanan Broken part dengan rasio luas 11.7% dan 14.3%, cukup
+# menghasilkan Front-door sisi kanan Broken part dengan rasio luas 11.7% dan 12.1%, cukup
 # dekat untuk dikenali C7 sebagai kerusakan yang sama, sementara berkasnya berbeda sehingga
-# C2 tidak ikut menyalak. Mengganti salah satunya berarti mengukur ulang pasangannya: foto
-# yang rasionya jauh berbeda membuat skenario itu diam saja saat didemokan, dan diamnya
-# tidak terlihat sebagai kegagalan.
+# C2 tidak ikut menyalak. Mengganti salah satunya berarti mengukur ulang pasangannya, dan
+# yang diukur harus bagian, sisi, jenis kerusakan, dan rasio luas sekaligus. Sisi yang beda
+# sudah cukup membuat C7 diam meski rasionya rapat, dan diamnya tidak terlihat sebagai
+# kegagalan saat didemokan.
 FOTO_FOLDER = {
     FOLDER_NORMAL: [
         "Car damages 777.png",   # Broken part
@@ -94,7 +95,7 @@ FOTO_FOLDER = {
     "4 - stnk-polis-lain": ["Car damages 505.png"],
     "5 - harga-tidak-ada-di-database": ["Car damages 997.png"],
     FOLDER_KLAIM_PERTAMA: ["Car damages 709.png"],
-    FOLDER_DIKLAIM_ULANG: ["Car damages 936.png"],
+    FOLDER_DIKLAIM_ULANG: ["Car damages 608.png"],
 }
 
 # Seluruh foto yang dipatok dikeluarkan dari pengundian folder yang belum dipatok. Tanpa
