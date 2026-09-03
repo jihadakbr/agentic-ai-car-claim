@@ -12,7 +12,7 @@ A claim moves through the system like this. The surveyor submits damage photos, 
 
 [![Live App](https://img.shields.io/badge/Live-App-000000?logo=vercel)](https://agentic-ai-car-claim.vercel.app)
 
-<!-- [![YouTube Demo](https://img.shields.io/badge/YouTube-Demo-red?logo=youtube)](https://youtu.be/) -->
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo-red?logo=youtube)](https://youtu.be/wcvTRFi9NIw?si=7g4asIdfWXcB5bJZ)
 
 [![Kaggle Training](https://img.shields.io/badge/Kaggle-Training-20BEFF?logo=kaggle)](https://www.kaggle.com/code/jihadakbr/car-claim-detection)
 
